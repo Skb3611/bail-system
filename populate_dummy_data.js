@@ -1,6 +1,7 @@
 const { MongoClient, ObjectId } = require('mongodb');
 const crypto = require('crypto');
-
+const dotenv = require('dotenv');
+dotenv.config()
 const uri = process.env.MONGO_URL || 'mongodb://localhost:27017';
 
 function hashPassword(password) {
@@ -16,10 +17,48 @@ async function populateDummyData() {
     
     const db = client.db('bailRecognizerDB');
     
+    console.log('🧹 Clearing existing data...');
+    await db.collection('users').deleteMany({});
+    await db.collection('cases').deleteMany({});
+    await db.collection('auditLogs').deleteMany({});
+    await db.collection('legalRules').deleteMany({});
+    console.log('✓ Existing data cleared');
+
+    // Add dummy legal rules
+    const rulesCollection = db.collection('legalRules');
+    const dummyRules = [
+      { section: '302', type: 'IPC', offense: 'Murder', category: 'Non-Bailable', riskLevel: 'High', description: 'Punishment for murder' },
+      { section: '304', type: 'IPC', offense: 'Culpable homicide', category: 'Non-Bailable', riskLevel: 'High', description: 'Culpable homicide not amounting to murder' },
+      { section: '307', type: 'IPC', offense: 'Attempt to murder', category: 'Non-Bailable', riskLevel: 'High', description: 'Attempt to murder' },
+      { section: '376', type: 'IPC', offense: 'Rape', category: 'Non-Bailable', riskLevel: 'High', description: 'Punishment for rape' },
+      { section: '379', type: 'IPC', offense: 'Theft', category: 'Bailable', riskLevel: 'Low', description: 'Punishment for theft' },
+      { section: '380', type: 'IPC', offense: 'Theft in dwelling', category: 'Non-Bailable', riskLevel: 'Medium', description: 'Theft in dwelling house' },
+      { section: '392', type: 'IPC', offense: 'Robbery', category: 'Non-Bailable', riskLevel: 'High', description: 'Punishment for robbery' },
+      { section: '420', type: 'IPC', offense: 'Cheating', category: 'Bailable', riskLevel: 'Medium', description: 'Cheating and dishonestly inducing delivery of property' },
+      { section: '406', type: 'IPC', offense: 'Criminal breach of trust', category: 'Bailable', riskLevel: 'Medium', description: 'Punishment for criminal breach of trust' },
+      { section: '498A', type: 'IPC', offense: 'Cruelty by husband', category: 'Non-Bailable', riskLevel: 'Medium', description: 'Husband or relative of husband subjecting woman to cruelty' },
+      { section: '323', type: 'IPC', offense: 'Voluntarily causing hurt', category: 'Bailable', riskLevel: 'Low', description: 'Punishment for voluntarily causing hurt' },
+      { section: '324', type: 'IPC', offense: 'Voluntarily causing hurt by dangerous weapons', category: 'Non-Bailable', riskLevel: 'Medium', description: 'Voluntarily causing hurt by dangerous weapons' },
+      { section: '354', type: 'IPC', offense: 'Assault on woman', category: 'Non-Bailable', riskLevel: 'Medium', description: 'Assault or criminal force to woman with intent to outrage her modesty' },
+      { section: '341', type: 'IPC', offense: 'Wrongful restraint', category: 'Bailable', riskLevel: 'Low', description: 'Punishment for wrongful restraint' },
+      { section: '447', type: 'IPC', offense: 'Criminal trespass', category: 'Bailable', riskLevel: 'Low', description: 'Punishment for criminal trespass' },
+      { section: '506', type: 'IPC', offense: 'Criminal intimidation', category: 'Bailable', riskLevel: 'Low', description: 'Punishment for criminal intimidation' }
+    ];
+    
+    await rulesCollection.insertMany(dummyRules);
+    console.log(`✓ Created ${dummyRules.length} legal rules`);
+
     // Add dummy users
     const usersCollection = db.collection('users');
-    
     const dummyUsers = [
+      {
+        name: 'System Admin',
+        email: 'admin@bailsystem.com',
+        password: hashPassword('admin123'),
+        role: 'Admin',
+        active: true,
+        createdAt: new Date('2024-01-01')
+      },
       {
         name: 'Rahul Sharma',
         email: 'rahul.sharma@bailsystem.com',
@@ -65,7 +104,7 @@ async function populateDummyData() {
     // Get admin user for case creation
     const adminUser = await usersCollection.findOne({ email: 'admin@bailsystem.com' });
     const officerUser = await usersCollection.findOne({ email: 'rahul.sharma@bailsystem.com' });
-    
+    console.log(adminUser);
     // Add dummy cases
     const casesCollection = db.collection('cases');
     

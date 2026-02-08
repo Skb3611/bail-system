@@ -397,7 +397,12 @@ export async function POST(request) {
   
   try {
     const db = await connectDB();
-    const body = await request.json();
+    let body = {};
+    try {
+      body = await request.json();
+    } catch (e) {
+      // Ignore JSON parse error (e.g. empty body)
+    }
     
     // Login
     if (path === '/auth/login') {
@@ -522,6 +527,65 @@ export async function POST(request) {
       
       return NextResponse.json({ success: true, caseId: result.insertedId.toString() });
     }
+
+    // Batch analyze cases
+    if (path === '/cases/analyze-all') {
+      const user = await getSession(request);
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const casesCollection = db.collection('cases');
+      const rulesCollection = db.collection('legalRules');
+      
+      const allCases = await casesCollection.find({}).toArray();
+      let analyzedCount = 0;
+
+      for (const caseData of allCases) {
+        // Parse IPC sections
+        const ipcSections = parseSections(caseData.ipcSections);
+        const crpcSections = parseSections(caseData.crpcSections);
+        
+        // Get rules for these sections
+        const matchedRules = await rulesCollection.find({
+          section: { $in: ipcSections }
+        }).toArray();
+        
+        // Analyze
+        const categories = matchedRules.map(r => r.category);
+        const riskLevels = matchedRules.map(r => r.riskLevel);
+        const maxRiskLevel = riskLevels.includes('High') ? 'High' : riskLevels.includes('Medium') ? 'Medium' : 'Low';
+        
+        const legalAnalysis = {
+          matchedRules,
+          categories,
+          maxRiskLevel,
+          ipcSections,
+          crpcSections
+        };
+        
+        // Evaluate bail eligibility
+        const bailEvaluation = await evaluateBailEligibility(caseData, legalAnalysis);
+        
+        // Update case with analysis
+        await casesCollection.updateOne(
+          { _id: caseData._id },
+          { 
+            $set: { 
+              legalAnalysis,
+              bailEvaluation,
+              analyzedAt: new Date()
+            } 
+          }
+        );
+        analyzedCount++;
+      }
+      
+      // Log audit
+      await createAuditLog(user._id.toString(), 'Batch Analysis Run', { count: analyzedCount });
+      
+      return NextResponse.json({ success: true, count: analyzedCount });
+    }
     
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
     
@@ -537,7 +601,12 @@ export async function PUT(request) {
   
   try {
     const db = await connectDB();
-    const body = await request.json();
+    let body = {};
+    try {
+      body = await request.json();
+    } catch (e) {
+      // Ignore JSON parse error
+    }
     
     // Update user (Admin only)
     if (path.startsWith('/users/')) {

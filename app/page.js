@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Scale, Users, FileText, LogOut, Menu, X, BarChart3, AlertCircle, CheckCircle, XCircle, Clock, Printer, Shield, FileCheck } from 'lucide-react';
+import { Scale, Users, FileText, LogOut, Menu, X, BarChart3, AlertCircle, CheckCircle, XCircle, Clock, Printer, Shield, FileCheck, Book } from 'lucide-react';
+import { LegalRules } from '@/components/LegalRules';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('login');
@@ -307,7 +308,55 @@ export default function App() {
       setError('Failed to disable user');
     }
   };
-  
+
+  const handleEnableUser = async (userId) => {
+    if (!confirm('Are you sure you want to enable this user?')) return;
+    
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: true })
+      });
+      
+      if (res.ok) {
+        setSuccess('User enabled successfully!');
+        loadUsers();
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to enable user');
+      }
+    } catch (err) {
+      setError('Network error occurred');
+    }
+  };
+
+  const handleBatchAnalyze = async () => {
+    if (!confirm('This will re-analyze ALL cases. Continue?')) return;
+    
+    setError('');
+    setSuccess('Starting batch analysis...');
+    
+    try {
+      const res = await fetch('/api/cases/analyze-all', {
+        method: 'POST'
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        setSuccess(`Batch analysis completed! Analyzed ${data.count} cases.`);
+        if (currentPage === 'dashboard') loadDashboardStats();
+        setTimeout(() => setSuccess(''), 5000);
+      } else {
+        setError(data.error || 'Batch analysis failed');
+      }
+    } catch (err) {
+      setError('Network error occurred');
+    }
+  };
+
   const loadAuditLogs = async () => {
     try {
       const res = await fetch('/api/audit/logs');
@@ -329,6 +378,7 @@ export default function App() {
     if (page === 'users') loadUsers();
     if (page === 'audit') loadAuditLogs();
     if (page === 'dashboard') loadDashboardStats();
+    // if (page === 'legal-rules') window.location.href = '/legal-rules';
   };
   
   const openReport = (caseData) => {
@@ -415,9 +465,9 @@ export default function App() {
   
   // Main Dashboard Layout
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="max-h-screen h-screen bg-slate-50 flex">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-slate-900 text-white transition-all duration-300 overflow-hidden print:hidden`}>
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-slate-900 text-white transition-all duration-300 overflow-hidden print:hidden h-full`}>
         <div className="p-6">
           <div className="flex items-center gap-3 mb-8">
             <Scale className="w-8 h-8" />
@@ -446,6 +496,16 @@ export default function App() {
             >
               <FileText className="w-5 h-5" />
               <span>Cases</span>
+            </button>
+
+            <button
+              onClick={() => navigateTo('legal-rules')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                currentPage === 'legal-rules' ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              <Book className="w-5 h-5" />
+              <span>Legal Rules</span>
             </button>
             
             {user.role === 'Admin' && (
@@ -477,9 +537,8 @@ export default function App() {
             <div className="mb-4">
               <p className="text-sm font-medium">{user.name}</p>
               <p className="text-xs text-slate-400">{user.email}</p>
-              <Badge variant="outline" className="mt-2 text-xs">{user.role}</Badge>
             </div>
-            <Button onClick={handleLogout} variant="outline" className="w-full" size="sm">
+            <Button onClick={handleLogout} variant="destructive" className="w-full" size="sm">
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
@@ -505,6 +564,7 @@ export default function App() {
             {currentPage === 'users' && 'User Management'}
             {currentPage === 'audit' && 'Audit Logs'}
             {currentPage === 'report' && 'Bail Recommendation Report'}
+            {currentPage === 'legal-rules' && 'Legal Rules Database'}
           </h2>
         </header>
         
@@ -580,6 +640,10 @@ export default function App() {
                   </Button>
                   <Button variant="outline" onClick={() => navigateTo('cases')}>
                     View All Cases
+                  </Button>
+                  <Button variant="outline" onClick={handleBatchAnalyze}>
+                    <Scale className="w-4 h-4 mr-2" />
+                    Analyze All Cases
                   </Button>
                   {user.role === 'Admin' && (
                     <Button variant="outline" onClick={() => navigateTo('users')}>
@@ -1255,6 +1319,11 @@ export default function App() {
                               Disable
                             </Button>
                           )}
+                          {!u.active && (
+                            <Button size="sm" variant="default" onClick={() => handleEnableUser(u.id)}>
+                              Enable
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1303,6 +1372,9 @@ export default function App() {
                 </div>
               </CardContent>
             </Card>
+          )}
+          {currentPage === 'legal-rules' && (
+            <LegalRules />
           )}
         </div>
       </main>
