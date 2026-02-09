@@ -26,6 +26,9 @@ export default function App() {
   // Dashboard stats
   const [stats, setStats] = useState({ totalCases: 0, underReview: 0, bailRecommended: 0, bailRejected: 0 });
   
+  // Processing state for actions
+  const [processing, setProcessing] = useState(false);
+  
   // Cases
   const [cases, setCases] = useState([]);
   const [selectedCase, setSelectedCase] = useState(null);
@@ -81,6 +84,7 @@ export default function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setProcessing(true);
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -98,6 +102,8 @@ export default function App() {
       }
     } catch (err) {
       setError('Network error occurred');
+    } finally {
+      setProcessing(false);
     }
   };
   
@@ -148,6 +154,7 @@ export default function App() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setProcessing(true);
     try {
       const res = await fetch('/api/cases', {
         method: 'POST',
@@ -180,6 +187,8 @@ export default function App() {
       }
     } catch (err) {
       setError('Network error occurred');
+    } finally {
+      setProcessing(false);
     }
   };
   
@@ -187,6 +196,7 @@ export default function App() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setProcessing(true);
     try {
       const res = await fetch(`/api/cases/${selectedCase.id}`, {
         method: 'PUT',
@@ -204,12 +214,15 @@ export default function App() {
       }
     } catch (err) {
       setError('Network error occurred');
+    } finally {
+      setProcessing(false);
     }
   };
   
   const analyzeCase = async (caseId) => {
     setError('');
     setSuccess('');
+    setProcessing(true);
     try {
       const res = await fetch(`/api/cases/${caseId}/analyze`);
       if (res.ok) {
@@ -223,6 +236,8 @@ export default function App() {
       }
     } catch (err) {
       setError('Network error occurred');
+    } finally {
+      setProcessing(false);
     }
   };
   
@@ -242,6 +257,7 @@ export default function App() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setProcessing(true);
     try {
       const res = await fetch('/api/users', {
         method: 'POST',
@@ -260,6 +276,8 @@ export default function App() {
       }
     } catch (err) {
       setError('Network error occurred');
+    } finally {
+      setProcessing(false);
     }
   };
   
@@ -267,6 +285,7 @@ export default function App() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setProcessing(true);
     try {
       const updateData = { ...userForm };
       if (!updateData.password) {
@@ -291,12 +310,15 @@ export default function App() {
       }
     } catch (err) {
       setError('Network error occurred');
+    } finally {
+      setProcessing(false);
     }
   };
   
   const handleDisableUser = async (userId) => {
     if (!confirm('Are you sure you want to disable this user?')) return;
     
+    setProcessing(true);
     try {
       const res = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
       if (res.ok) {
@@ -306,12 +328,15 @@ export default function App() {
       }
     } catch (err) {
       setError('Failed to disable user');
+    } finally {
+      setProcessing(false);
     }
   };
 
   const handleEnableUser = async (userId) => {
     if (!confirm('Are you sure you want to enable this user?')) return;
     
+    setProcessing(true);
     try {
       const res = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
@@ -329,6 +354,8 @@ export default function App() {
       }
     } catch (err) {
       setError('Network error occurred');
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -337,10 +364,13 @@ export default function App() {
     
     setError('');
     setSuccess('Starting batch analysis...');
+    setProcessing(true);
     
     try {
       const res = await fetch('/api/cases/analyze-all', {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
       });
       
       const data = await res.json();
@@ -354,6 +384,8 @@ export default function App() {
       }
     } catch (err) {
       setError('Network error occurred');
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -448,8 +480,8 @@ export default function App() {
                 />
               </div>
               
-              <Button type="submit" className="w-full">
-                Sign In
+              <Button type="submit" className="w-full" disabled={processing}>
+                {processing ? 'Signing In...' : 'Sign In'}
               </Button>
               
               <div className="text-xs text-center text-slate-500 mt-4">
@@ -467,78 +499,78 @@ export default function App() {
   return (
     <div className="max-h-screen h-screen bg-slate-50 flex">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-slate-900 text-white transition-all duration-300 overflow-hidden print:hidden h-full`}>
-        <div className="p-6">
+      <aside className={`${sidebarOpen ? 'w-full md:w-64' : 'w-0'} fixed md:relative  bg-slate-900 text-white transition-all duration-300 overflow-hidden print:hidden h-full z-50`}>
+        <div className="p-6 h-full flex flex-col">
           <div className="flex items-center gap-3 mb-8">
             <Scale className="w-8 h-8" />
-            <div>
+            <div className="whitespace-nowrap">
               <h1 className="font-bold text-lg">Bail Recognizer</h1>
               <p className="text-xs text-slate-400">Legal System</p>
             </div>
           </div>
           
-          <nav className="space-y-2">
+          <nav className="space-y-2 flex-1 overflow-y-auto">
             <button
-              onClick={() => navigateTo('dashboard')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              onClick={() => { navigateTo('dashboard'); if (window.innerWidth < 768) setSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${
                 currentPage === 'dashboard' ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <BarChart3 className="w-5 h-5" />
+              <BarChart3 className="w-5 h-5 flex-shrink-0" />
               <span>Dashboard</span>
             </button>
             
             <button
-              onClick={() => navigateTo('cases')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              onClick={() => { navigateTo('cases'); if (window.innerWidth < 768) setSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${
                 currentPage === 'cases' || currentPage === 'case-new' || currentPage === 'case-detail' ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <FileText className="w-5 h-5" />
+              <FileText className="w-5 h-5 flex-shrink-0" />
               <span>Cases</span>
             </button>
 
             <button
-              onClick={() => navigateTo('legal-rules')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              onClick={() => { navigateTo('legal-rules'); if (window.innerWidth < 768) setSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${
                 currentPage === 'legal-rules' ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <Book className="w-5 h-5" />
+              <Book className="w-5 h-5 flex-shrink-0" />
               <span>Legal Rules</span>
             </button>
             
             {user.role === 'Admin' && (
               <>
                 <button
-                  onClick={() => navigateTo('users')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  onClick={() => { navigateTo('users'); if (window.innerWidth < 768) setSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${
                     currentPage === 'users' ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800'
                   }`}
                 >
-                  <Users className="w-5 h-5" />
+                  <Users className="w-5 h-5 flex-shrink-0" />
                   <span>Users</span>
                 </button>
                 
                 <button
-                  onClick={() => navigateTo('audit')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  onClick={() => { navigateTo('audit'); if (window.innerWidth < 768) setSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${
                     currentPage === 'audit' ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800'
                   }`}
                 >
-                  <Shield className="w-5 h-5" />
+                  <Shield className="w-5 h-5 flex-shrink-0" />
                   <span>Audit Logs</span>
                 </button>
               </>
             )}
           </nav>
           
-          <div className="mt-auto pt-8 border-t border-slate-800">
-            <div className="mb-4">
-              <p className="text-sm font-medium">{user.name}</p>
-              <p className="text-xs text-slate-400">{user.email}</p>
+          <div className="pt-8 border-t border-slate-800 mt-auto">
+            <div className="mb-4 whitespace-nowrap">
+              <p className="text-sm font-medium truncate">{user.name}</p>
+              <p className="text-xs text-slate-400 truncate">{user.email}</p>
             </div>
-            <Button onClick={handleLogout} variant="destructive" className="w-full" size="sm">
+            <Button onClick={handleLogout} variant="destructive" className="w-full whitespace-nowrap" size="sm">
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
@@ -634,19 +666,19 @@ export default function App() {
                   <CardDescription>Common tasks for case management</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-4">
-                  <Button onClick={() => navigateTo('case-new')}>
+                  <Button className="w-full md:w-auto" onClick={() => navigateTo('case-new')}>
                     <FileText className="w-4 h-4 mr-2" />
                     Register New Case
                   </Button>
-                  <Button variant="outline" onClick={() => navigateTo('cases')}>
+                  <Button variant="outline" className="w-full md:w-auto" onClick={() => navigateTo('cases')}>
                     View All Cases
                   </Button>
-                  <Button variant="outline" onClick={handleBatchAnalyze}>
+                  <Button variant="outline" className="w-full md:w-auto" onClick={handleBatchAnalyze} disabled={processing}>
                     <Scale className="w-4 h-4 mr-2" />
-                    Analyze All Cases
+                    {processing ? 'Analyzing...' : 'Analyze All Cases'}
                   </Button>
                   {user.role === 'Admin' && (
-                    <Button variant="outline" onClick={() => navigateTo('users')}>
+                    <Button variant="outline" className="w-full md:w-auto" onClick={() => navigateTo('users')}>
                       <Users className="w-4 h-4 mr-2" />
                       Manage Users
                     </Button>
@@ -659,9 +691,9 @@ export default function App() {
           {/* Cases List */}
           {currentPage === 'cases' && (
             <div>
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold">All Cases</h3>
-                <Button onClick={() => navigateTo('case-new')}>
+                <Button onClick={() => navigateTo('case-new')} >
                   <FileText className="w-4 h-4 mr-2" />
                   Register New Case
                 </Button>
@@ -676,18 +708,18 @@ export default function App() {
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="text-lg">{c.caseTitle}</CardTitle>
-                          <CardDescription className="mt-1">
+                          <CardTitle className="sm:text-lg">{c.caseTitle}</CardTitle>
+                          <CardDescription className="mt-1 text-xs sm:text-sm">
                             FIR: {c.firNumber} | {c.policeStation}
                           </CardDescription>
                         </div>
-                        <Badge variant={c.status === 'Registered' ? 'secondary' : c.status === 'Under Review' ? 'default' : c.status === 'Closed' ? 'outline' : 'default'}>
+                        <Badge className={"text-xs sm:text-sm"} variant={c.status === 'Registered' ? 'secondary' : c.status === 'Under Review' ? 'default' : c.status === 'Closed' ? 'outline' : 'default'}>
                           {c.status}
                         </Badge>
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
                         <div>
                           <p className="text-slate-600">Accused:</p>
                           <p className="font-medium">{c.accusedName}</p>
@@ -864,10 +896,10 @@ export default function App() {
                   </div>
                   
                   <div className="flex gap-4">
-                    <Button type="submit">
-                      Register Case
+                    <Button type="submit" disabled={processing}>
+                      {processing ? 'Registering...' : 'Register Case'}
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => navigateTo('cases')}>
+                    <Button type="button" variant="outline" onClick={() => navigateTo('cases')} disabled={processing}>
                       Cancel
                     </Button>
                   </div>
@@ -883,9 +915,9 @@ export default function App() {
                 <Button variant="outline" onClick={() => navigateTo('cases')}>
                   ← Back to Cases
                 </Button>
-                <Button variant="outline" onClick={() => analyzeCase(selectedCase.id)}>
+                <Button variant="outline" onClick={() => analyzeCase(selectedCase.id)} disabled={processing}>
                   <Scale className="w-4 h-4 mr-2" />
-                  Run Bail Analysis
+                  {processing ? 'Analyzing...' : 'Run Bail Analysis'}
                 </Button>
                 {selectedCase.bailEvaluation && (
                   <Button variant="outline" onClick={() => openReport(selectedCase)}>
@@ -983,7 +1015,7 @@ export default function App() {
                       />
                     </div>
                     
-                    <Button type="submit">Update Case</Button>
+                    <Button type="submit" disabled={processing}>{processing ? 'Updating...' : 'Update Case'}</Button>
                   </form>
                 </CardContent>
               </Card>
@@ -1275,9 +1307,9 @@ export default function App() {
                     </div>
                     
                     <div className="flex gap-4">
-                      <Button type="submit">{editingUser ? 'Update User' : 'Create User'}</Button>
+                      <Button type="submit" disabled={processing}>{editingUser ? (processing ? 'Updating...' : 'Update User') : (processing ? 'Creating...' : 'Create User')}</Button>
                       {editingUser && (
-                        <Button type="button" variant="outline" onClick={() => {
+                        <Button type="button" variant="outline" disabled={processing} onClick={() => {
                           setEditingUser(null);
                           setUserForm({ name: '', email: '', password: '', role: 'Legal Officer' });
                         }}>
@@ -1296,10 +1328,10 @@ export default function App() {
                 <CardContent>
                   <div className="space-y-4">
                     {users.map((u) => (
-                      <div key={u.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div key={u.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4">
                         <div>
                           <p className="font-medium">{u.name}</p>
-                          <p className="text-sm text-slate-600">{u.email}</p>
+                          <p className="text-sm text-slate-600 break-all">{u.email}</p>
                           <div className="flex gap-2 mt-2">
                             <Badge>{u.role}</Badge>
                             <Badge variant={u.active ? 'default' : 'destructive'}>
@@ -1307,20 +1339,20 @@ export default function App() {
                             </Badge>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => {
+                        <div className="flex gap-2 w-full sm:w-auto">
+                          <Button size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={() => {
                             setEditingUser(u);
                             setUserForm({ name: u.name, email: u.email, password: '', role: u.role });
                           }}>
                             Edit
                           </Button>
                           {u.active && (
-                            <Button size="sm" variant="destructive" onClick={() => handleDisableUser(u.id)}>
+                            <Button size="sm" variant="destructive" className="flex-1 sm:flex-none" disabled={processing} onClick={() => handleDisableUser(u.id)}>
                               Disable
                             </Button>
                           )}
                           {!u.active && (
-                            <Button size="sm" variant="default" onClick={() => handleEnableUser(u.id)}>
+                            <Button size="sm" variant="default" className="flex-1 sm:flex-none" disabled={processing} onClick={() => handleEnableUser(u.id)}>
                               Enable
                             </Button>
                           )}
@@ -1343,20 +1375,25 @@ export default function App() {
               <CardContent>
                 <div className="space-y-3">
                   {auditLogs.map((log) => (
-                    <div key={log.id} className="flex items-start gap-4 p-4 border rounded-lg">
-                      <div className="flex-shrink-0 w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
+                    <div key={log.id} className="flex flex-col sm:flex-row items-start gap-4 p-4 border rounded-lg">
+                      <div className="flex-shrink-0 w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center hidden sm:flex">
                         <Shield className="w-5 h-5 text-slate-600" />
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{log.action}</p>
+                      <div className="flex-1 w-full">
+                        <div className="flex justify-between items-start">
+                          <p className="font-medium">{log.action}</p>
+                          <div className="text-right text-sm text-slate-500 sm:hidden">
+                            <p>{new Date(log.timestamp).toLocaleDateString()}</p>
+                          </div>
+                        </div>
                         <p className="text-sm text-slate-600">By: {log.userName} ({log.userEmail})</p>
                         {log.details && Object.keys(log.details).length > 0 && (
-                          <p className="text-xs text-slate-500 mt-1">
+                          <p className="text-xs text-slate-500 mt-1 break-all">
                             {JSON.stringify(log.details)}
                           </p>
                         )}
                       </div>
-                      <div className="text-right text-sm text-slate-500">
+                      <div className="text-right text-sm text-slate-500 hidden sm:block">
                         <p>{new Date(log.timestamp).toLocaleDateString()}</p>
                         <p>{new Date(log.timestamp).toLocaleTimeString()}</p>
                       </div>

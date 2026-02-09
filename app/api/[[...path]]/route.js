@@ -2,10 +2,12 @@ import { MongoClient, ObjectId } from 'mongodb';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
-
+import dotenv from 'dotenv';
+dotenv.config();
 const uri = process.env.MONGO_URL;
 let client;
 let db;
+console.log(uri);
 
 async function connectDB() {
   if (!client) {
