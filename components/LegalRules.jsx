@@ -83,7 +83,10 @@ export function LegalRules() {
               </CardHeader>
               <CardContent className="flex-1 flex flex-col gap-4">
                 <p className="text-sm text-muted-foreground">
-                  {rule.description}
+                 Cause : {rule.description}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                 Punishemt : {rule.punishment}
                 </p>
                 <div className="mt-auto pt-4 flex items-center justify-between border-t text-sm">
                   <span className="text-muted-foreground">Risk Level:</span>
