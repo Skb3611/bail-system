@@ -1,231 +1,144 @@
-# Bail Recognizer System
+# Bail Recognizer System - Technical Documentation
 
-A comprehensive legal case management system with rule-based bail eligibility analysis.
+A full-stack Legal Tech application built with **Next.js 14**, designed to automate bail eligibility analysis through rule-based logic. This project serves as a comprehensive case study for students to understand **modern web architecture**, **session-based authentication**, and **legal-to-technical logic mapping**.
 
-## 🎯 Overview
+---
 
-The Bail Recognizer System is a web application designed to help legal officers and administrators manage criminal cases, analyze IPC/CrPC sections, and evaluate bail eligibility using predefined rules. The system is optimized for simplicity and fast generation without AI or external APIs.
+## 🏗️ Technical Architecture
 
-## 🚀 Features
+The project follows a **Monolithic App Router** architecture using Next.js, integrating both frontend and backend logic within a single deployment unit.
 
-### ✅ Implemented Modules
+### 💻 Tech Stack
+- **Frontend**: [Next.js 14](https://nextjs.org/) (Client Components, Tailwind CSS, shadcn/ui)
+- **Backend**: Next.js [API Routes](https://nextjs.org/docs/app/building-your-application/routing/route-handlers) (Node.js runtime)
+- **Database**: [MongoDB](https://www.mongodb.com/) (NoSQL for flexible case schemas)
+- **AI Integration**: [Google Gemini 2.0 Flash](https://deepmind.google/technologies/gemini/) (Context-aware legal assistant)
+- **Security**: SHA-256 password hashing & HTTP-only cookies
 
-#### 1. Authentication & Authorization
-- Session-based authentication
-- Role-based access control (Admin & Legal Officer)
-- Secure login/logout functionality
+---
 
-#### 2. User Management (Admin Only)
-- Create, edit, and disable users
-- Assign roles (Admin/Legal Officer)
-- View all users with status
+## 🧠 Core Logic: Bail Eligibility Engine
 
-#### 3. Case Registration
-- Comprehensive case registration form
-- Fields: FIR Number, Case Title, Police Station, Accused Details, IPC/CrPC Sections, etc.
-- Case status tracking
+The heart of this system is the `evaluateBailEligibility` function found in [route.js](file:///c:\Users\Asus\Desktop\project-hub-projects\bail-system\app\api\[[...path]]\route.js). It translates complex legal principles into executable code using a hierarchical rule-set:
 
-#### 4. Legal Section Analysis
-- Pre-populated database with 16+ IPC sections
-- Rule-based section matching
-- Automatic offense categorization (Bailable/Non-Bailable)
-- Risk level assessment (Low/Medium/High)
+### **Rule Hierarchy**
+1.  **Purely Bailable**: If all offenses are categorized as 'Bailable' in the `legalRules` collection $\rightarrow$ **Eligible**.
+2.  **Serious Crimes**: If any offense is 'Non-Bailable' and categorized as 'High' risk $\rightarrow$ **Not Eligible**.
+3.  **Humanitarian Grounds**: If the accused is over 60 years old (Senior Citizen) $\rightarrow$ **Conditional Bail**.
+4.  **Moderate Risk**: Non-bailable offenses with 'Medium' or 'Low' risk $\rightarrow$ **Conditional Bail** (requires surety).
+5.  **Complexity Fallback**: Mixed offense types default to **Conditional Bail** to ensure judicial oversight.
 
-#### 5. Bail Eligibility Evaluation
-- Complex conditional logic for bail determination
-- Special considerations for senior citizens (age > 60)
-- Risk-based recommendations
-- Detailed reasoning for decisions
+---
 
-#### 6. Bail Recommendations
-- Three outcomes: Eligible, Not Eligible, Conditional
-- Specific conditions when applicable:
-  - Surety requirements
-  - Periodic reporting
-  - Travel restrictions
-  - Court appearance obligations
+## � Security & Session Management
 
-#### 7. Case Status Tracking
-- 5 status types: Registered, Under Review, Bail Recommended, Bail Rejected, Closed
-- Easy status updates from case detail page
+Students can study the implementation of **Session-Based Authentication** in this project:
 
-#### 8. Report Generation
-- Print-friendly bail recommendation reports
-- Complete case information
-- Legal analysis details
-- Bail evaluation results
-- Officer and timestamp information
+-   **Stateful Sessions**: Active sessions are stored in the `sessions` MongoDB collection, mapping a unique token to a `userId`.
+-   **Cookie Security**: The session token is sent to the client via a `Set-Cookie` header with `httpOnly: true`, preventing XSS-based token theft.
+-   **Middleware-like Protection**: The `getSession` helper validates the token on every restricted API call, checking for both existence and expiration.
+-   **Audit Trail**: Every significant action (Login, Case Update, Analysis) triggers a `createAuditLog` entry, ensuring accountability.
 
-#### 9. Audit Logging
-- Comprehensive activity tracking
-- Logged events: Login, Case Created, Case Updated, Bail Evaluation, Report Generated
-- Admin-only access to audit logs
+---
 
-#### 10. Dashboard & Analytics
-- Real-time statistics:
-  - Total Cases
-  - Cases Under Review
-  - Bail Recommended
-  - Bail Rejected
-- Quick action buttons
+## 🤖 AI Assistant Implementation
 
-## 🛠️ Tech Stack
+The Chatbot.jsx component demonstrates how to integrate LLMs into a business workflow:
 
-- **Frontend**: Next.js 14 (App Router), React, Tailwind CSS
-- **Backend**: Next.js API Routes
-- **Database**: MongoDB
-- **UI Components**: shadcn/ui
-- **Authentication**: Session-based with HTTP-only cookies
+-   **Context Injection**: The AI is given a `systemInstruction` that defines its role as a "Bail Legal Assistant".
+-   **History Sanitation**: To comply with the Gemini API, the history is cleaned to ensure it always begins with a `user` role message.
+-   **Streaming UI**: Uses React state to manage real-time message updates and a "thinking" indicator.
 
-## 📋 Default Credentials
+---
 
-```
-Email: admin@bailsystem.com
-Password: admin123
+## 📊 Database Schema
+
+| Collection | Responsibility | Key Fields |
+| :--- | :--- | :--- |
+| `users` | Identity management | `name`, `email`, `password` (hashed), `role` |
+| `cases` | Core business data | `firNumber`, `ipcSections`, `legalAnalysis`, `bailEvaluation` |
+| `legalRules` | Knowledge base | `section`, `offense`, `category`, `riskLevel` |
+| `auditLogs` | Compliance | `userId`, `action`, `details`, `timestamp` |
+| `sessions` | Auth state | `token`, `userId`, `expiresAt` |
+
+---
+
+## � Getting Started for Students
+
+### 1. Environment Setup
+Create a `.env` file in the root directory:
+```env
+MONGO_URL=your_mongodb_connection_string
+GEMINI_API_KEY=your_google_ai_key
 ```
 
-## 🔧 Installation & Setup
+### 2. Data Population
+Run the following command to seed the database with test cases and the admin user:
+```bash
+node populate_dummy_data.js
+```
 
-1. The application is already running on port 3000
-2. MongoDB is automatically initialized with:
-   - Default admin account
-   - Pre-populated legal rules for 16 IPC sections
+### 3. Study Path
+1.  **Authentication**: Start with `POST /api/auth/login` in [route.js](file:///c:\Users\Asus\Desktop\project-hub-projects\bail-system\app\api\[[...path]]\route.js).
+2.  **State Management**: Explore how `app/page.js` handles the complex UI state transitions between different dashboard views.
+3.  **Legal Logic**: Deep dive into the `analyzeCase` logic to see how IPC sections are parsed and matched against the database.
+4.  **Responsive UI**: Study the Tailwind classes in [Chatbot.jsx](file:///c:\Users\Asus\Desktop\project-hub-projects\bail-system\components\Chatbot.jsx) to see how the interface adapts to mobile screens.
 
-## 📊 Pre-loaded Legal Rules
+---
 
-The system includes rules for the following IPC sections:
+## 📁 Project Structure
 
-| Section | Offense | Category | Risk Level |
-|---------|---------|----------|------------|
-| 302 | Murder | Non-Bailable | High |
-| 307 | Attempt to murder | Non-Bailable | High |
-| 376 | Rape | Non-Bailable | High |
-| 392 | Robbery | Non-Bailable | High |
-| 324 | Hurt by dangerous weapons | Non-Bailable | Medium |
-| 498A | Cruelty by husband | Non-Bailable | Medium |
-| 354 | Assault on woman | Non-Bailable | Medium |
-| 420 | Cheating | Bailable | Medium |
-| 406 | Criminal breach of trust | Bailable | Medium |
-| 379 | Theft | Bailable | Low |
-| 323 | Voluntarily causing hurt | Bailable | Low |
-| 341 | Wrongful restraint | Bailable | Low |
-| 447 | Criminal trespass | Bailable | Low |
-| 506 | Criminal intimidation | Bailable | Low |
+```text
+bail-system/
+├── app/                  # Next.js App Router
+│   ├── api/              # API Route Handlers
+│   │   ├── [[...path]]/  # Main CRUD & Logic (Cases, Users, Auth)
+│   │   ├── chat/         # Gemini AI Integration
+│   │   └── legal-rules/  # Legal Rules Data Fetching
+│   ├── layout.js         # Global Layout & Providers
+│   └── page.js           # Main Dashboard UI
+├── components/           # React Components
+│   ├── ui/               # Shared shadcn/ui components
+│   ├── Chatbot.jsx       # AI Assistant Interface
+│   └── LegalRules.jsx    # Rules Management UI
+├── lib/                  # Utility Functions
+├── public/               # Static Assets
+└── populate_dummy_data.js # DB Seeding Script
+```
 
-## 🎨 UI Features
+---
 
-- Clean, professional design
-- Responsive sidebar navigation
-- Color-coded status badges
-- Real-time form validation
-- Print-optimized report layout
-- Dark-themed sidebar
-- Accessible interface
+## 📡 API Endpoints
 
-## 🔐 Security Features
+The system uses a combination of standard RESTful routes and a catch-all route handler.
 
-- Password hashing (SHA-256)
-- HTTP-only session cookies
-- Role-based route protection
-- Session expiration (24 hours)
-- Audit logging for accountability
+### **Authentication**
+- `POST /api/auth/login` - Authenticates user and sets HTTP-only session cookie.
+- `POST /api/auth/logout` - Clears the session cookie.
+- `GET /api/auth/session` - Returns the current user session if valid.
 
-## 📖 User Roles
+### **Case Management**
+- `GET /api/cases` - Retrieves all registered cases.
+- `POST /api/cases` - Registers a new case.
+- `GET /api/cases/:id` - Retrieves detailed information for a specific case.
+- `PUT /api/cases/:id` - Updates existing case data.
+- `GET /api/cases/:id/analyze` - Triggers the rule-based bail analysis for a case.
+- `POST /api/cases/analyze-all` - Runs batch analysis on all registered cases.
+- `GET /api/cases/:id/report` - Generates data for the print-ready report.
 
-### Admin
-- Full system access
-- User management (create, edit, disable)
-- View all cases
-- Access audit logs
-- Generate reports
+### **User Management (Admin Only)**
+- `GET /api/users` - Lists all system users.
+- `POST /api/users` - Creates a new user account.
+- `PUT /api/users/:id` - Updates user roles or status.
+- `DELETE /api/users/:id` - Soft-disables a user account.
 
-### Legal Officer
-- Register new cases
-- View and update cases
-- Run bail eligibility analysis
-- Generate reports
-- Cannot access user management or audit logs
+### **System & AI**
+- `GET /api/dashboard/stats` - Aggregated metrics for the dashboard cards.
+- `GET /api/audit/logs` - (Admin) Retrieves the system activity trail.
+- `GET /api/legal-rules` - Fetches the IPC/CrPC rules database.
+- `POST /api/chat` - Interface for the Gemini 2.0 Flash AI assistant.
 
-## 🧮 Bail Eligibility Logic
+---
 
-The system uses the following rule-based logic:
-
-1. **All Bailable Offenses** → Eligible for Bail
-2. **Non-Bailable + High Risk** → Not Eligible
-3. **Age > 60** → Conditional Bail (senior citizen consideration)
-4. **Non-Bailable + Medium/Low Risk** → Conditional Bail
-5. **Mixed Offenses** → Conditional Bail
-
-## 📄 Report Features
-
-- Comprehensive case information
-- Legal section analysis with matched rules
-- Bail eligibility status
-- Official recommendation
-- Reasoning and conditions
-- Officer details and timestamp
-- Print-ready format
-
-## 🔍 Audit Trail
-
-All system activities are logged:
-- User logins
-- Case creation and updates
-- Bail evaluation runs
-- Report generation
-- User modifications
-
-## 🚫 Not Implemented (As Per Requirements)
-
-- AI/ML features
-- Maps integration
-- Email notifications
-- File uploads
-- Real legal databases
-- Complex analytics
-- OAuth authentication
-
-## 📊 Database Collections
-
-1. **users** - User accounts and authentication
-2. **cases** - Case records with all details
-3. **legalRules** - IPC section rules and categorization
-4. **auditLogs** - System activity logs
-5. **sessions** - Active user sessions
-
-## 🎯 API Endpoints
-
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-- `GET /api/auth/session` - Check session
-
-### Cases
-- `GET /api/cases` - List all cases
-- `GET /api/cases/:id` - Get case details
-- `POST /api/cases` - Create new case
-- `PUT /api/cases/:id` - Update case
-- `GET /api/cases/:id/analyze` - Run bail analysis
-- `GET /api/cases/:id/report` - Get report data
-
-### Users (Admin Only)
-- `GET /api/users` - List all users
-- `POST /api/users` - Create user
-- `PUT /api/users/:id` - Update user
-- `DELETE /api/users/:id` - Disable user
-
-### System
-- `GET /api/dashboard/stats` - Dashboard statistics
-- `GET /api/audit/logs` - Audit logs (Admin only)
-
-
-## 📱 Responsive Design
-
-The application is fully responsive and works on:
-- Desktop (1920px and above)
-- Tablet (768px - 1920px)
-- Mobile (320px - 768px)
-
-
-
-
+## ⚖️ Legal Disclaimer
+This system is an **educational prototype**. The bail eligibility logic is based on simplified interpretations of the Indian Penal Code (IPC) and should not be used for actual legal decision-making.
