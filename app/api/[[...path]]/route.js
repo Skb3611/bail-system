@@ -7,7 +7,6 @@ dotenv.config();
 const uri = process.env.MONGO_URL;
 let client;
 let db;
-console.log(uri);
 
 async function connectDB() {
   if (!client) {

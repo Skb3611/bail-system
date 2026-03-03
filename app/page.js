@@ -13,10 +13,13 @@ import { Scale, Users, FileText, LogOut, Menu, X, BarChart3, AlertCircle, CheckC
 import { LegalRules } from '@/components/LegalRules';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('login');
+  const [currentPage, setCurrentPage] = useState('welcome');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  // Selected role for login
+  const [selectedRole, setSelectedRole] = useState(null);
   
   // Forms and data
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
@@ -110,7 +113,8 @@ export default function App() {
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
-    setCurrentPage('login');
+    setCurrentPage('welcome');
+    setSelectedRole(null);
   };
   
   const loadDashboardStats = async () => {
@@ -433,19 +437,98 @@ export default function App() {
     );
   }
   
+  // Welcome Page
+  if (currentPage === 'welcome' && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+        <Card className="w-full max-w-2xl shadow-2xl border-none overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            <div className="bg-slate-900 p-8 text-white flex flex-col justify-center items-center text-center space-y-6">
+              <div className="bg-white/10 p-6 rounded-full backdrop-blur-sm">
+                <Scale className="w-16 h-16 text-white" />
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight">Bail Recognizer</h1>
+                <p className="text-slate-400 text-sm uppercase tracking-widest font-medium">Legal Management System</p>
+              </div>
+              <p className="text-slate-300 text-sm max-w-xs leading-relaxed">
+                Streamlining legal case management and bail eligibility analysis with rule-based automation.
+              </p>
+            </div>
+            
+            <div className="p-8 bg-white flex flex-col justify-center space-y-8">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-slate-900">Welcome Back</h2>
+                <p className="text-slate-500 text-sm">Please select your role to continue to the system.</p>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-4">
+                <Button 
+                  variant="outline" 
+                  className="h-24 flex flex-col items-center justify-center space-y-2 hover:border-slate-900 hover:bg-slate-50 transition-all border-2"
+                  onClick={() => {
+                    setSelectedRole('Admin');
+                    setCurrentPage('login');
+                  }}
+                >
+                  <Shield className="w-6 h-6 text-slate-900" />
+                  <div className="text-center">
+                    <p className="font-bold text-slate-900">Administrator</p>
+                    <p className="text-xs text-slate-500 font-normal">Manage users and audit logs</p>
+                  </div>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="h-24 flex flex-col items-center justify-center space-y-2 hover:border-slate-900 hover:bg-slate-50 transition-all border-2"
+                  onClick={() => {
+                    setSelectedRole('Legal Officer');
+                    setCurrentPage('login');
+                  }}
+                >
+                  <Users className="w-6 h-6 text-slate-900" />
+                  <div className="text-center">
+                    <p className="font-bold text-slate-900">Legal Officer</p>
+                    <p className="text-xs text-slate-500 font-normal">Register and analyze cases</p>
+                  </div>
+                </Button>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-xs text-slate-400 italic">Authorized personnel only</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+  
   // Login Page
   if (currentPage === 'login' || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
         <Card className="w-full max-w-md shadow-xl">
-          <CardHeader className="text-center space-y-2">
-            <div className="flex justify-center mb-4">
+          <CardHeader className="text-center space-y-2 relative">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="absolute left-4 top-4 text-slate-500 hover:text-slate-900"
+              onClick={() => setCurrentPage('welcome')}
+            >
+              ← Back
+            </Button>
+            <div className="flex justify-center mb-4 pt-4">
               <div className="bg-slate-900 p-4 rounded-full">
-                <Scale className="w-12 h-12 text-white" />
+                {selectedRole === 'Admin' ? <Shield className="w-12 h-12 text-white" /> : <Scale className="w-12 h-12 text-white" />}
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Bail Recognizer System</CardTitle>
-            <CardDescription>Sign in to manage legal cases</CardDescription>
+            <CardTitle className="text-2xl font-bold">
+              {selectedRole ? `${selectedRole} Login` : 'System Login'}
+            </CardTitle>
+            <CardDescription>
+              {selectedRole === 'Admin' ? 'Admin credentials required' : 'Enter your legal officer credentials'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
@@ -461,7 +544,7 @@ export default function App() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@bailsystem.com"
+                  placeholder={selectedRole === 'Admin' ? "admin@bailsystem.com" : "officer@bailsystem.com"}
                   value={loginForm.email}
                   onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                   required
@@ -484,10 +567,12 @@ export default function App() {
                 {processing ? 'Signing In...' : 'Sign In'}
               </Button>
               
-              <div className="text-xs text-center text-slate-500 mt-4">
-                <p>Default credentials:</p>
-                <p className="font-mono mt-1">admin@bailsystem.com / admin123</p>
-              </div>
+              {selectedRole === 'Admin' && (
+                <div className="text-xs text-center text-slate-500 mt-4">
+                  <p>Default admin credentials:</p>
+                  <p className="font-mono mt-1">admin@bailsystem.com / admin123</p>
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>
